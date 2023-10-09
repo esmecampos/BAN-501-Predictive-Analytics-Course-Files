@@ -1,0 +1,86 @@
+
+```{r}
+library(tidyverse)
+library(VIM)
+library(mice)
+library(skimr)
+
+```
+
+## Before beginning the assignment tasks, you should read-in the data for the assignment into a data frame called grades. This data contains grade information from an engineering course. The dataset was originally used to investigate how student performance in the course would be predictive of student grades on the “Final” exam. The “Prefix” column is a surrogate for enrollment year in the engineering program. Smaller values imply older (more mature?) students
+
+```{r}
+grades = read_csv("class-grades.csv")
+```
+
+### Structure and summary
+
+```{r}
+str(grades)
+summary(grades)
+skim(grades)
+```
+
+
+
+
+
+
+## Task 1: For which variables is there missing data? Tutorial, Midterm, TakeHome, Final
+
+```{r}
+skim(grades)
+
+```
+
+
+## Task 2: Use the VIM package to visualize missingness. Are there any students that are missing multiple pieces of data? YES
+
+```{r}
+vim_plot = aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE), CEX.AXIS=.7)
+
+
+```
+
+
+## Task 3: Use row-wise deletion of missing values to create a new data frame. How many rows remain in this data frame? 89
+
+```{r}
+grades_rowdel = grades %>% drop_na()
+skim(grades_rowdel)
+```
+
+
+## Task 4: Use column-wise deletion of missing values to create a new data frame (from the original data frame not from the data frame created in Task 3). How many columns remain in this data frame? 2
+
+```{r}
+grades_coldel = grades %>% select(Prefix, Assignment)
+vim_plot = aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE), CEX.AXIS=.7)
+skim(grades_coldel)
+```
+
+
+## Task 5: Which approach (Task 3 or Task 4) seems preferable for this dataset? Briefly discuss your answer.
+
+```{r}
+
+```
+
+
+## Task 6 Use the “mice” package to impute the missing data in this dataset. Set “m = 5” and “method =”pmm"" in the imputation. You MUST use a random number seed of 123 for this imputation. What is the mean value for the “Final” variable after imputation?
+
+```{r}
+set.seed(123)
+imp_Final = mice(grades, m=5, method = 'pmm', printFlag = FALSE)
+
+summary(imp_Final)
+
+```
+
+```{r}
+densityplot(imp_Final, ~Final)
+
+grades_complete = complete(imp_Final)
+summary(grades_complete)
+```
+

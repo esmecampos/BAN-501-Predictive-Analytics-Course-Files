@@ -1,0 +1,109 @@
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(GGally)
+library(lmtest)
+
+```
+
+```{r}
+air = airquality
+```
+
+
+## How many rows are in the "air" dataframe?
+
+```{r}
+nrow(air)
+```
+
+## How many columns are in the “air” dataframe?
+
+```{r}
+dim(air)
+```
+
+```{r}
+air2 = air %>% drop_na()
+```
+
+## How many rows remain in this new (air2) data frame?
+
+```{r}
+nrow(air2)
+```
+
+## How many columns remain in this new (air2) data frame?
+
+```{r}
+dim(air2)
+```
+
+## Which variable is most strongly correlated with the “Ozone” variable?
+## Which variable is least strongly correlated with the “Ozone” variable?
+
+```{r}
+ggpairs(air2)
+```
+
+```{r}
+ggcorr(air2, label = TRUE)
+```
+
+
+## Plot “Temp” (x axis) versus “Ozone” (y axis) using the “ggplot” function. Choose an appropriate chart type. Which statement best describes the relationship between “Temp” and “Ozone”?
+
+```{r}
+ggplot(air2, aes(x=Temp, y=Ozone))+
+  geom_point(alpha=0.5)+
+  theme_bw()
+```
+
+
+
+
+```{r}
+
+air2_simple = recipe(Temp ~ Ozone, air2)
+
+lm_model = 
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model)%>%
+  add_recipe(air2_simple)
+
+lm_fit = fit(lm_wflow, air)
+
+summary(lm_fit$fit$fit$fit)
+```
+
+## Use the code below to generate 95% confidence intervals for the coefficients. Note that you may need to change “lm_fit” to the name of your model fit if you used a different name. True/False: A 95% confidence interval for the slope coefficient does not contain zero
+
+```{r}
+confint(lm_fit$fit$fit$fit)
+```
+
+## Using your linear regression model with “Temp” to predict “Ozone”, what is the predicted “Ozone” value when “Temp” is equal to 80 (to two decimal places)
+```{r}
+69.41072 + 0.20081 * 80
+
+testdata <- data.frame(Ozone = c(80))
+predict(lm_fit, new_data = testdata)
+```
+
+
+```{r}
+ggplot(air2, aes(x=Temp, y=Ozone))+
+  geom_point()+
+    geom_smooth(method = "lm", se=FALSE, color="red")+ theme_bw()
+```
+
+```{r}
+dwtest(lm_fit$fit$fit$fit)
+```
+

@@ -1,0 +1,62 @@
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(MASS)
+library(leaps)
+library(car)
+library(lubridate)
+library(lmtest)
+library(splines)
+library(readr)
+
+```
+
+```{r}
+bike <- read_csv("bike_cleaned-3.csv")
+
+bike = bike %>% mutate(dteday = mdy(dteday))
+summary(bike)
+str(bike)
+
+
+```
+
+```{r}
+bike = bike %>% mutate_if(is.character, as_factor)
+```
+
+
+```{r}
+bike = bike %>% mutate(hr = as_factor(hr))
+```
+
+```{r}
+
+bike_recipe = recipe(count~hr, bike)%>%
+  step_dummy(hr)
+
+lm_model = 
+  linear_reg()%>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model)%>%
+  add_recipe(bike_recipe)
+
+lm_fit = fit(lm_wflow, bike)
+  
+
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+
+```{r}
+
+```
+

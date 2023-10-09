@@ -1,0 +1,181 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(e1071)
+library(ROCR)
+```
+
+```{r}
+parole = read_csv("parole.csv")
+```
+
+```{r}
+str(parole)
+summary(parole)
+```
+
+## Carefully convert the male, race, state, crime, multiple.offenses, and violator variables to factors.
+## Recode (rename) the factor levels of each of these variables according to the description of the variables provided in the ParoleData.txt file (located with the assignment on Canvas).
+
+```{r}
+parole = parole %>% mutate(male = as_factor(male)) %>% mutate(male = fct_recode(male, "female" = "0", "male" = "1")) %>% 
+  mutate(race = as_factor(race))%>% mutate(race = fct_recode(race, "otherwise" = "2", "white" = "1")) %>% 
+  mutate(age = as_factor(age)) %>%
+  mutate(state = as_factor(state))%>% mutate(state = fct_recode(state, "other" = "1", "Kentucky" = "2", "Louisiana" = "3", "Virginia" = "4")) %>%
+  mutate(time.served = as_factor(time.served)) %>%
+  mutate(max.sentence = as_factor(max.sentence)) %>%
+  mutate(multiple.offenses = as_factor(multiple.offenses)) %>% mutate(multiple.offenses = fct_recode(multiple.offenses, "otherwise" = "0", "multiple" = "1")) %>% 
+  mutate(crime = as_factor(crime)) %>% mutate(crime = fct_recode(crime, "other" = "1", "larceny" = "2", "drug" = "3", "driving" = "4")) %>% 
+  mutate(violator = as_factor(violator)) %>% mutate(violator = fct_recode(violator, "no" = "0", "yes" = "1"))
+```
+
+
+## There are 675 parolees in the dataset. How many of these parolees ended up violating parole? HINT: Examine the response variable “violator”.
+
+```{r}
+violated.parole = parole %>% filter(violator %in% c("no"))
+
+```
+
+##  Split the data into training and testing sets. Your training set should have 70% of the data. Use a random number (set.seed) of 12345. Be sure that the split is stratified by “violator”
+
+```{r}
+set.seed(12345)
+parole_split = initial_split(parole, prop = .70, strata = violator)
+train = training(parole_split)
+test = testing(parole_split)
+
+```
+
+
+## Second part of question 2. I was supposed to use "yes" and "no" instead of "completed" and "violated". "Yes" would have been the positive class/category. In this case, since I used other terms, it would be "completed", which would be our positive class. I ended up changing that part to follow the rules.
+```{r}
+levels(train$violator)
+
+train = train %>% mutate(violator = fct_relevel(violator, c("no","yes")))
+levels(train$violator)
+
+```
+
+```{r}
+parole_model = 
+  logistic_reg(mode = "classification") %>% 
+  set_engine("glm")
+
+parole_recipe = recipe(violator~state, train) 
+
+logreg_wf =
+  workflow() %>%
+  add_model(parole_model) %>%
+  add_recipe(parole_recipe)
+
+parole_fit = fit(logreg_wf, train)
+
+```
+
+
+```{r}
+
+summary(parole_fit$fit$fit$fit)
+```
+
+```{r}
+parole_model2 = 
+  logistic_reg(mode = "classification") %>% 
+  set_engine("glm")
+
+parole_recipe2 = recipe(violator~state + multiple.offenses + race, train) 
+
+logreg_wf2 =
+  workflow() %>%
+  add_model(parole_model2) %>%
+  add_recipe(parole_recipe2)
+
+parole_fit2 = fit(logreg_wf2, train)
+```
+
+```{r}
+summary(parole_fit2$fit$fit$fit)
+```
+
+
+```{r}
+newdata = data.frame(state = "Louisiana", multiple.offenses = "multiple", race = "white")
+predict(parole_fit2,newdata,type="prob")
+```
+
+
+
+```{r}
+newdata = data.frame(state = "Louisiana", multiple.offenses = "multiple", race = "white")
+predictions = predict(parole_fit2, parole, type = "prob")
+
+predict(parole_fit2, newdata, type = "prob")
+```
+```{r}
+predictions = predict(parole_fit2, train, type = "prob")[2]
+head(predictions)
+```
+
+```{r}
+ROCRpred = prediction(predictions, train$violator)
+
+ROCRperf = performance(ROCRpred, "tpr", "fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-.2,1.7))
+```
+
+
+
+```{r}
+as.numeric(performance(ROCRpred,"auc")@y.values)
+```
+
+
+```{r}
+opt.cut = function(perf,pred){
+  cut.ind = mapply(FUN=function(x,y,p){
+    d=(x-0)^2+(y-1)^2
+    ind=which(d==min(d))
+    c(sensitivity=y[[ind]], specificity=1-x[[ind]],
+      cutoff=p[[ind]])
+  },perf@x.values,perf@y.values,pred@cutoffs)
+}
+print(opt.cut(ROCRperf,ROCRpred))
+    
+```
+
+
+```{r}
+t1 = table(train$violator,predictions > .2015788)
+t1
+```
+
+```{r}
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+## Sensitivity
+```{r}
+36 / (18+36)
+```
+## Specificity
+```{r}
+360 / (360 + 57)  
+```
+
+
+
+```{r}
+nrow(train)
+```
+
+```{r}
+t2 = table(train$violator,predictions > .5)
+
+(t2[1,1]+t2[2,2])/nrow(train)
+```
+

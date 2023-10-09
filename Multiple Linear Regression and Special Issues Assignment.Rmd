@@ -1,0 +1,151 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(MASS)
+library(leaps)
+library(car)
+library(lubridate)
+library(lmtest)
+library(splines)
+library(readr)
+
+```
+
+```{r}
+bike <- read_csv("bike_cleaned-3.csv")
+
+bike = bike %>% mutate(dteday = mdy(dteday))
+summary(bike)
+str(bike)
+
+
+```
+
+```{r}
+bike = bike %>% mutate_if(is.character, as_factor)
+```
+
+```{r}
+bike = bike %>% mutate(hr = as_factor(hr))
+```
+
+```{r}
+ggplot(bike, aes(x=windspeed, y=count)) + 
+  geom_point() + 
+  theme_bw()
+
+  
+ggplot(bike, aes(x=hum, y=count)) + 
+  geom_point() + 
+  theme_bw()
+
+ggplot(bike, aes(x=atemp, y=count)) + 
+  geom_point() + 
+  theme_bw()
+  
+ggplot(bike, aes(x=temp, y=count)) + 
+  geom_point() + 
+  theme_bw()
+
+```
+
+```{r}
+ggplot(bike, aes(x=season, y=count)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+```{r}
+ggplot(bike, aes(x=hr, y=count)) + 
+  geom_boxplot() + 
+  theme_bw()
+```
+
+```{r}
+bike_recipe = recipe(count~hr, bike)%>%
+  step_dummy(all_nominal())
+
+lm_model = 
+  linear_reg()%>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model)%>%
+  add_recipe(bike_recipe)
+
+lm_fit = fit(lm_wflow, bike)
+  
+```
+
+```{r}
+summary(lm_fit$fit$fit$fit)
+```
+
+```{r}
+ggplot(bike, aes(x=temp, y=count)) + 
+  geom_point() + 
+  theme_bw()
+```
+
+```{r}
+bike_recipe = recipe(count~hr + temp, bike)%>%
+  step_dummy(all_nominal())
+
+lm_model = 
+  linear_reg()%>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model)%>%
+  add_recipe(bike_recipe)
+
+lm_fit2 = fit(lm_wflow, bike)
+```
+
+```{r}
+summary(lm_fit2$fit$fit$fit)
+```
+
+```{r}
+bike_recipe = recipe(count~temp + atemp, bike)
+ 
+
+lm_model = 
+  linear_reg()%>%
+  set_engine("lm")
+
+lm_wflow = 
+  workflow() %>%
+  add_model(lm_model)%>%
+  add_recipe(bike_recipe)
+
+lm_fit3 = fit(lm_wflow, bike)
+```
+
+```{r}
+summary(lm_fit3$fit$fit$fit)
+```
+
+```{r}
+allmod = lm(count~.,bike)
+summary(allmod)
+
+emptymod = lm(count~1, bike)
+summary(emptymod)
+```
+
+```{r}
+backmod = stepAIC(allmod, direction = "backward", trace = TRUE)
+summary(backmod)
+```
+
