@@ -1,2 +1,2 @@
-# Classification-Trees
-BAN 502 Predictive Analytics
+# BAN 502 Predictive Analytics Course Files
+Classification-Trees
